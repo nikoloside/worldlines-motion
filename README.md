@@ -8,7 +8,7 @@
 
 ## Blender 官方 SMPL-X 蒙皮接口
 
-[三段 Blender 导入文件及步骤](demos/blender/README.md)已生成。它们把程序动作封装成官方插件读取的 55 关节 `.npz`；安装官方 **SMPL-X for Blender** 插件及其独立提供的模型后，插件会建立真正的 SMPL-X 人体网格、骨架和蒙皮。当前本机只有程序动作与合成白模，没有官方 Blender 模型 ZIP；Blender 4.5.0 Beta 在空白后台启动时崩溃，因此实际 `.blend` 的创建与人体蒙皮效果尚未验收。
+[三段可播放的 Blender 场景、官方插件动作文件及步骤](demos/blender/README.md)已生成。现有 `.blend` 使用自制白模、SMPL-X 的 55 关节顺序与线性蒙皮；已在 Blender 中抽样比对上游 LBS，顶点误差低于 1 毫米。它们不是官方 SMPL-X 人体。另有三段 `.npz` 已按官方 **SMPL-X for Blender** 插件格式封装；取得插件模型包后，可用其真实人体网格、骨架和姿态修正形态键导入。
 
 ## 当前结果（2026-10-23）
 

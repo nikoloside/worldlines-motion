@@ -1,5 +1,17 @@
 # Blender 中的 SMPL-X 动作
 
+## 已可打开的 Blender 场景（自制测试身型）
+
+| 动作 | Blender 文件 | 预览 |
+|---|---|---|
+| 入画、深蹲、起身 | [walk_squat.synthetic_rig.blend](walk_squat.synthetic_rig.blend) | [三维视频](../synthetic-lbs/walk_squat.synthetic_lbs.mp4) |
+| 受惊跳起 | [startle_jump.synthetic_rig.blend](startle_jump.synthetic_rig.blend) | [Blender 渲染帧](startle_jump.synthetic_rig.png) |
+| 入画、受惊跳起 | [walk_startle.synthetic_rig.blend](walk_startle.synthetic_rig.blend) | [三维视频](../synthetic-lbs/walk_startle.synthetic_lbs.mp4) |
+
+这三个场景有可编辑的 55 关节骨架、线性蒙皮权重、关键帧、灯光、地面和机位。Blender 后台重新打开成功；在首帧、中间帧和末帧与上游 SMPL-X LBS 比较，顶点误差均小于 1 毫米。**人体网格与权重是本项目自制测试素材，不是官方 SMPL-X 模型。**
+
+用 `build_blender_scene.py` 可重新生成；`synthetic_fixture.npz` 是该白模的顶点、骨架和权重。
+
 以下三段 `.npz` 可供官方 **SMPL-X for Blender** 插件的 **Add Animation** 导入：
 
 | 动作 | 文件 | 帧数 |
@@ -30,4 +42,4 @@ blender -b --python blender_import.py -- \
 
 ## 目前的验证边界
 
-导出器已按官方插件当前 `operators/animation.py` 的字段检查与 55 关节规格验证，且三段文件都可由 NumPy 无 pickle 读取。本机现装的 Blender **4.5.0 Beta** 在空白后台启动时就退出码 139；本机也没有官方 Blender 插件模型 ZIP，因此尚未完成在真实 SMPL-X 网格上的 Blender 导入和视觉验收。仓库不分发受限的模型文件。
+导出器已按官方插件当前 `operators/animation.py` 的字段检查与 55 关节规格验证，且三段文件都可由 NumPy 无 pickle 读取。Blender 4.5.0 Beta 在受限沙箱中启动失败，在正常权限下已成功生成并重新打开白模 `.blend`。官方 Blender 插件模型 ZIP 尚未安装，因此真实 SMPL-X 人体蒙皮与姿态修正仍待验收。仓库不分发受限的模型文件。
