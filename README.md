@@ -6,6 +6,10 @@
 
 [三段双机位视频、关键帧和逐帧数据](demos/synthetic-lbs/README.md)已生成。蓝衣角色是本项目自制测试身型，逐帧调用 SMPL-X 上游的 LBS 蒙皮函数；红点是头部/头皮锚点。它验证了三维动作与附件数据链路，不代表已取得或运行官方 SMPL-X Body。
 
+## Blender 官方 SMPL-X 蒙皮接口
+
+[三段 Blender 导入文件及步骤](demos/blender/README.md)已生成。它们把程序动作封装成官方插件读取的 55 关节 `.npz`；安装官方 **SMPL-X for Blender** 插件及其独立提供的模型后，插件会建立真正的 SMPL-X 人体网格、骨架和蒙皮。当前本机只有程序动作与合成白模，没有官方 Blender 模型 ZIP；Blender 4.5.0 Beta 在空白后台启动时崩溃，因此实际 `.blend` 的创建与人体蒙皮效果尚未验收。
+
 ## 当前结果（2026-10-23）
 
 这三个文件是**程序动作写入 SMPL-X 参数格式**的测试，不是 MotionBricks 生成、G1→SMPL-X 重定向或 SMPL-X 网格渲染。`smplx_bridge.py` 已能用官方 `smplx.create` 接收这些参数，逐帧计算网格与头部位置，再导出头部四元数和可选头皮顶点；本机尚无 `SMPLX_MALE.npz/.pkl` 模型资产，因此实际网格推理没有跑通。头发引擎仓库/接口也尚未定位，所以 `hair_attachment.json` 是对接契约，尚未送入引擎。
