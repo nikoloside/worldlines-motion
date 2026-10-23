@@ -1,6 +1,6 @@
 # Worldlines Motion Lab
 
-独立的角色动作实验项目：标准动作、SMPL-X 姿态接口、MotionBricks 重定向，以及头发绑定数据。此项目不依赖某一部短剧的剧本或镜头目录。
+独立的角色动作实验项目。当前有标准动作和 SMPL-X 姿态接口；下一阶段是 MotionBricks 重定向与头发引擎集成。此项目不依赖某一部短剧的剧本或镜头目录。
 
 ## 当前结果（2026-10-23）
 
@@ -18,8 +18,10 @@
 
 ```sh
 python3 -m pip install -e .
-python3 -m unittest discover -s . -p 'test_*.py' -v
-python3 smplx_bridge.py run \
+SMPLX_SOURCE="$HOME/.x-repo/github.com/vchoutas/smplx"
+PYTHONPATH="$SMPLX_SOURCE" python3 -m unittest discover -s . -p 'test_*.py' -v
+# 取得适用许可和模型文件后，运行真实人体网格推理：
+PYTHONPATH="$SMPLX_SOURCE" python3 smplx_bridge.py run \
   walk_squat.smplx.npz \
   /path/to/SMPLX_MALE.npz \
   /tmp/worldlines-walk-squat --gender male
@@ -42,3 +44,9 @@ python3 smplx_bridge.py run \
 ## 应用到具体影片
 
 标准动作是技术基线。影片项目可以引用这些动作并增加角色身型、走位、道具接触和摄影机参数；具体剧本的改编意见留在影片项目内，不进入本项目的核心动作数据。
+
+## 上游源码与许可边界
+
+官方 [vchoutas/smplx](https://github.com/vchoutas/smplx) 已单独拉取在共享仓库目录 `~/.x-repo/github.com/vchoutas/smplx`，检出版本 `1265df7`。源码仓库不包含 `SMPLX_MALE.npz/.pkl`；模型需从[官方站点](https://smpl-x.is.tue.mpg.de/)注册取得。`worldlines-motion` 不复制上游源码或模型。
+
+上游仓库的 [LICENSE](https://github.com/vchoutas/smplx/blob/main/LICENSE) 对该仓库的软件与模型写有非商业用途及再分发限制。我们的基础包不自动安装 `smplx`；取得适用许可后可选择性安装 `worldlines-motion[smplx]`，或在本地测试时把官方源码目录加入 `PYTHONPATH`。发布开源工具前须核定实际使用的软件与模型许可。

@@ -7,7 +7,10 @@ name = "worldlines-motion"
 version = "0.1.0"
 description = "Character motion experiments and SMPL-X interface for Worldlines"
 requires-python = ">=3.10"
-dependencies = ["numpy>=1.24", "torch>=2.0", "smplx>=0.1.28", "Pillow>=10"]
+dependencies = ["numpy>=1.24", "Pillow>=10"]
+
+[project.optional-dependencies]
+smplx = ["torch>=2.0", "smplx>=0.1.28"]
 
 [tool.setuptools]
 py-modules = ["smplx_bridge", "preview_clips"]
