@@ -46,6 +46,7 @@ def make_clip(case: str, fps: int = FPS) -> dict[str, np.ndarray | str | int]:
         gait = (1.0 - ramp(t, stop - 0.3, stop)) if walking else 0.0
         cycle = 2.0 * math.pi * t / 0.8
         transl[i, 0] = -2.5 + 2.5 * ramp(t, 0, stop) if walking else 0.0
+        global_orient[i, 1] = math.pi / 2 if walking else 0.0  # face travel direction (+X)
         if case == "walk_squat":
             squat = ramp(t, 2.6, 3.3) * (1.0 - ramp(t, 4.15, 4.95))
             jump = 0.0
@@ -57,19 +58,20 @@ def make_clip(case: str, fps: int = FPS) -> dict[str, np.ndarray | str | int]:
             jump = 0.32 * math.sin(math.pi * u) if 0.0 <= u <= 1.0 else 0.0
             squat = 0.15 * anticipation
             alarm = ramp(t, trigger - 0.05, trigger + 0.08) * (1.0 - ramp(t, trigger + 0.7, trigger + 1.35))
-        transl[i, 1] = -0.32 * squat + jump
+        transl[i, 1] = -0.39 * squat + jump
         # Index 0/1: left/right hip; 3/4: knees; 6/7: ankles.
         for side, phase, hip, knee, ankle, shoulder, elbow in (
             (1.0, 0.0, 0, 3, 6, 15, 17),
             (-1.0, math.pi, 1, 4, 7, 16, 18),
         ):
             stride = math.sin(cycle + phase) * gait
-            body_pose[i, hip, 0] = 0.65 * squat + 0.26 * stride
-            body_pose[i, knee, 0] = -1.25 * squat + max(0.0, -stride) * 0.35
-            body_pose[i, ankle, 0] = 0.55 * squat - max(0.0, -stride) * 0.16
-            body_pose[i, shoulder, 0] = side * 0.12 * gait - 0.50 * alarm
+            body_pose[i, hip, 0] = -1.05 * squat + 0.26 * stride
+            body_pose[i, knee, 0] = 2.10 * squat + max(0.0, -stride) * 0.35
+            body_pose[i, ankle, 0] = -1.05 * squat - max(0.0, -stride) * 0.16
+            body_pose[i, shoulder, 0] = -0.30 * stride - 0.50 * alarm
+            body_pose[i, shoulder, 2] = -side * 0.90 * alarm
             body_pose[i, elbow, 0] = -0.24 * alarm
-        body_pose[i, 2, 0] = -0.16 * squat  # spine1 counter-lean
+        body_pose[i, 2, 0] = 0.20 * squat  # spine1 forward balance
         body_pose[i, 11, 0] = 0.12 * alarm  # neck response
     return {
         "schema": "worldlines.smplx_motion.v1",

@@ -13,4 +13,4 @@ dependencies = ["numpy>=1.24", "Pillow>=10"]
 smplx = ["torch>=2.0", "smplx>=0.1.28"]
 
 [tool.setuptools]
-py-modules = ["smplx_bridge", "preview_clips"]
+py-modules = ["smplx_bridge", "preview_clips", "render_lbs_demo"]
