@@ -16,9 +16,11 @@ import torch
 from smplx.lbs import batch_rodrigues, lbs
 
 from smplx_bridge import load_clip
+from muscular_profile import make_muscular_rest
 
 
-def prepare(model_path: Path, clip_path: Path, output_dir: Path) -> None:
+def prepare(model_path: Path, clip_path: Path, output_dir: Path,
+            physique: str = "neutral", strength: float = 1.0) -> None:
     clip = load_clip(clip_path)
     # The Julia NPZ has the official mesh/LBS tensors but omits hand PCA means;
     # smplx.create expects those means, so read the geometry directly instead.
@@ -30,6 +32,12 @@ def prepare(model_path: Path, clip_path: Path, output_dir: Path) -> None:
         faces = np.asarray(model["f"], dtype=np.int32)
         shapedirs = np.asarray(model["shapedirs"][:, :, :10], dtype=np.float32)
         posedirs = np.asarray(model["posedirs"], dtype=np.float32)
+    if physique == "muscular_male":
+        template, betas = make_muscular_rest(template, shapedirs, regressor, weights, strength)
+    elif physique == "neutral":
+        betas = np.zeros(10, dtype=np.float32)
+    else:
+        raise ValueError(f"Unknown physique: {physique}")
     # Ground the rest body, preserving all relative joint and vertex positions.
     template[:, 1] -= template[:, 1].min()
     rest = regressor @ template
@@ -39,7 +47,8 @@ def prepare(model_path: Path, clip_path: Path, output_dir: Path) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(output_dir / "model_fixture.local.npz", vertices=template, faces=faces,
                         colors=colors, weights=weights, rest=rest, parents=parents,
-                        source="licensed_smplx_model_lbs_only")
+                        source="licensed_smplx_model_lbs_only", physique=physique,
+                        physique_strength=np.float32(strength), betas=betas)
 
     count = len(clip["transl"])
     frame_indices = np.array([0, count // 2, count - 1], dtype=np.int32)
@@ -85,7 +94,7 @@ def prepare(model_path: Path, clip_path: Path, output_dir: Path) -> None:
     expected_full = full_vertices.detach().cpu().numpy() + clip["transl"][frame_indices, None, :]
     np.savez_compressed(output_dir / "reference_full.local.npz", vertices=expected_full.astype(np.float32),
                         frame_indices=frame_indices, fps=int(clip["fps"]))
-    print(f"Prepared official SMPL-X mesh: {len(template)} vertices, {len(faces)} faces, 55 bones")
+    print(f"Prepared SMPL-X mesh: {len(template)} vertices, {len(faces)} faces, 55 bones; physique={physique}")
 
 
 def main() -> None:
@@ -93,8 +102,10 @@ def main() -> None:
     parser.add_argument("model", type=Path)
     parser.add_argument("clip", type=Path)
     parser.add_argument("output_dir", type=Path)
+    parser.add_argument("--physique", choices=("neutral", "muscular_male"), default="neutral")
+    parser.add_argument("--strength", type=float, default=1.0)
     args = parser.parse_args()
-    prepare(args.model, args.clip, args.output_dir)
+    prepare(args.model, args.clip, args.output_dir, args.physique, args.strength)
 
 
 if __name__ == "__main__":

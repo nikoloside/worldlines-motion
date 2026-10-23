@@ -8,7 +8,7 @@
 
 ## Blender 官方 SMPL-X 蒙皮接口
 
-[Blender 场景与导入步骤](demos/blender/README.md)已生成。仓库内三段 `.blend` 是可编辑的自制白模。另使用官网男性 SMPL-X 模型，在本机忽略目录 `demos/local-smplx/` 生成三段真实人体 `.full.blend`：10,475 顶点、55 关节、官方蒙皮权重和逐帧姿态修正。Blender 首、中、末帧与上游完整 SMPL-X LBS 的最大顶点误差约 1 微米。模型派生文件不提交到开源仓库。
+[Blender 场景与导入步骤](demos/blender/README.md)已生成。仓库内三段 `.blend` 是可编辑的自制白模。另使用官网男性 SMPL-X 模型，在本机忽略目录 `demos/local-smplx/` 生成三段真实人体 `.full.blend` 和视频：10,475 顶点、55 关节、官方蒙皮权重和逐帧姿态修正。另有一个胸肩臂加厚、腰部收紧的肌肉男自定义塑形 Blender 动画与视频。Blender 首、中、末帧与上游完整 SMPL-X LBS 的最大顶点误差约 1 微米。模型派生文件不提交到开源仓库；肌肉塑形本身不是官方 beta 参数。
 
 ## 当前结果（2026-10-23）
 

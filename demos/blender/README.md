@@ -32,6 +32,35 @@
 
 每段都有同名 `.full.png` 渲染图。抽查首、中、末帧，Blender 网格与上游完整 SMPL-X LBS + pose blendshapes 的最大顶点误差约 0.000001 米。形态键是按 30 fps 逐帧烘焙的；修改骨架动作后需要重新计算修正。官网模型以及所有派生 `.blend` 被 `.gitignore` 排除，开源仓库只保留生成代码和自制白模。
 
+三段本地人体视频分别是 `demos/local-smplx/walk_squat/walk_squat.SMPLX_MALE.full.mp4`、`demos/local-smplx/startle_jump/startle_jump.SMPLX_MALE.full.mp4` 和 `demos/local-smplx/walk_startle/walk_startle.SMPLX_MALE.full.mp4`。这些 MP4 也不进入开源仓库。
+
+## 肌肉男身型试验
+
+本机另有 `demos/local-smplx/muscular_walk_squat/walk_squat.MUSCULAR_MALE.review.blend`、同名 `.portrait.png` 近景图和 `.review.mp4` 入画深蹲视频。角色沿用官方男性 SMPL-X 的 10,475 顶点拓扑、55 骨骼、权重和姿态修正，在较精瘦的 `betas[10]` 基础上，局部拓宽胸背与上臂并收腰。动画依然能编辑骨架；首、中、末帧与这套自定义静态网格的上游 LBS + 姿态修正计算相比，最大顶点误差约 0.000001 米。
+
+局部塑形**不属于官方 SMPL-X beta 空间**。只把此动作 `.npz` 导入官方 Blender 插件，会得到 beta 身型而非完整肌肉塑形；完整外形在本机 `.blend` 中。若要求肌肉细节也能由纯 `betas` 复现，需要另行拟合身型或建立正式的角色形态键。模型与派生人体文件仍遵守官网许可，不在此开源仓库分发。
+
+复现本地肌肉版：
+
+```sh
+DEMO=demos/local-smplx/muscular_walk_squat
+SMPLX_SOURCE="$HOME/.x-repo/github.com/vchoutas/smplx"
+python3 make_muscular_demo_clip.py walk_squat.smplx.npz "$DEMO/walk_squat.muscular_clip.npz"
+PYTHONPATH="$SMPLX_SOURCE:." python3 prepare_official_smplx.py \
+  /path/to/SMPLX_MALE.npz "$DEMO/walk_squat.muscular_clip.npz" "$DEMO" \
+  --physique muscular_male
+blender -b --factory-startup --python build_blender_scene.py -- \
+  "$DEMO/model_fixture.local.npz" "$DEMO/walk_squat.muscular_clip.npz" \
+  "$DEMO/walk_squat.MUSCULAR_MALE.lbs.blend" "$DEMO/reference_lbs.local.npz"
+blender -b "$DEMO/walk_squat.MUSCULAR_MALE.lbs.blend" --python bake_pose_correctives.py -- \
+  "$DEMO/pose_offsets.local.npz" "$DEMO/reference_full.local.npz" \
+  "$DEMO/walk_squat.MUSCULAR_MALE.full.blend"
+blender -b "$DEMO/walk_squat.MUSCULAR_MALE.full.blend" --python polish_muscular_scene.py -- \
+  "$DEMO/walk_squat.MUSCULAR_MALE.review.blend" "$DEMO/walk_squat.MUSCULAR_MALE.portrait.png"
+blender -b "$DEMO/walk_squat.MUSCULAR_MALE.review.blend" --python render_blender_video.py -- \
+  "$DEMO/walk_squat.MUSCULAR_MALE.review.mp4"
+```
+
 复现时先从官网取得适用许可的模型，再执行：
 
 ```sh
