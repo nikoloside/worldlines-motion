@@ -2,7 +2,8 @@
 
 Output contains restricted model-derived geometry. Keep it out of Git.
 The resulting Blender rig has official topology, joint locations and LBS
-weights. Corrective pose blendshapes are not installed by this path.
+weights. Per-frame pose corrective offsets are exported for a separate
+Blender shape-key bake; these are local-only model-derived data.
 """
 
 from __future__ import annotations
@@ -12,25 +13,28 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from smplx.lbs import lbs
+from smplx.lbs import batch_rodrigues, lbs
 
 from smplx_bridge import load_clip
 
 
 def prepare(model_path: Path, clip_path: Path, output_dir: Path) -> None:
-    import smplx
-
     clip = load_clip(clip_path)
-    model = smplx.create(str(model_path), model_type="smplx", gender="male", use_pca=False, num_betas=10, batch_size=1)
-    model.eval()
-    template = model.v_template.detach().cpu().numpy().astype(np.float32)
-    regressor = model.J_regressor.detach().cpu().numpy().astype(np.float32)
-    weights = model.lbs_weights.detach().cpu().numpy().astype(np.float32)
+    # The Julia NPZ has the official mesh/LBS tensors but omits hand PCA means;
+    # smplx.create expects those means, so read the geometry directly instead.
+    with np.load(model_path, allow_pickle=False) as model:
+        template = np.asarray(model["v_template"], dtype=np.float32).copy()
+        regressor = np.asarray(model["J_regressor"], dtype=np.float32)
+        weights = np.asarray(model["weights"], dtype=np.float32)
+        parents = np.asarray(model["kintree_table"][0], dtype=np.int64)
+        faces = np.asarray(model["f"], dtype=np.int32)
+        shapedirs = np.asarray(model["shapedirs"][:, :, :10], dtype=np.float32)
+        posedirs = np.asarray(model["posedirs"], dtype=np.float32)
+    # Ground the rest body, preserving all relative joint and vertex positions.
+    template[:, 1] -= template[:, 1].min()
     rest = regressor @ template
-    parents = model.parents.detach().cpu().numpy().astype(np.int64)
     if template.shape[0] != weights.shape[0] or weights.shape[1] != 55 or rest.shape != (55, 3):
         raise ValueError("Expected official SMPL-X 55-joint mesh and weights")
-    faces = np.asarray(model.faces, dtype=np.int32)
     colors = np.repeat(np.asarray([[195, 205, 212]], dtype=np.uint8), len(faces), axis=0)
     output_dir.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(output_dir / "model_fixture.local.npz", vertices=template, faces=faces,
@@ -39,23 +43,47 @@ def prepare(model_path: Path, clip_path: Path, output_dir: Path) -> None:
 
     count = len(clip["transl"])
     frame_indices = np.array([0, count // 2, count - 1], dtype=np.int32)
-    pose = np.zeros((len(frame_indices), 165), dtype=np.float32)
-    pose[:, :3] = clip["global_orient"][frame_indices]
-    pose[:, 3:66] = clip["body_pose"][frame_indices]
-    posedirs = torch.zeros_like(model.posedirs)
+    full_pose = np.zeros((count, 165), dtype=np.float32)
+    full_pose[:, :3] = clip["global_orient"]
+    full_pose[:, 3:66] = clip["body_pose"]
+    pose = full_pose[frame_indices]
+    template_t = torch.from_numpy(template)
+    regressor_t = torch.from_numpy(regressor)
+    weights_t = torch.from_numpy(weights)
+    parents_t = torch.from_numpy(parents)
+    shapedirs_t = torch.from_numpy(shapedirs)
+    posedirs_t = torch.from_numpy(posedirs.reshape(-1, (55 - 1) * 9).T.copy())
+    zero_posedirs = torch.zeros_like(posedirs_t)
     with torch.no_grad():
+        rotations = batch_rodrigues(torch.from_numpy(full_pose.reshape(-1, 3))).reshape(count, 55, 3, 3)
+        features = (rotations[:, 1:] - torch.eye(3)).reshape(count, -1)
+        offsets = (features @ posedirs_t).reshape(count, len(template), 3).numpy()
         vertices, _ = lbs(
-            betas=torch.zeros((len(frame_indices), model.num_betas), dtype=torch.float32),
+            betas=torch.zeros((len(frame_indices), 10), dtype=torch.float32),
             pose=torch.from_numpy(pose),
-            v_template=model.v_template,
-            shapedirs=model.shapedirs,
-            posedirs=posedirs,
-            J_regressor=model.J_regressor,
-            parents=model.parents,
-            lbs_weights=model.lbs_weights,
+            v_template=template_t,
+            shapedirs=shapedirs_t,
+            posedirs=zero_posedirs,
+            J_regressor=regressor_t,
+            parents=parents_t,
+            lbs_weights=weights_t,
+        )
+        full_vertices, _ = lbs(
+            betas=torch.zeros((len(frame_indices), 10), dtype=torch.float32),
+            pose=torch.from_numpy(pose),
+            v_template=template_t,
+            shapedirs=shapedirs_t,
+            posedirs=posedirs_t,
+            J_regressor=regressor_t,
+            parents=parents_t,
+            lbs_weights=weights_t,
         )
     expected = vertices.detach().cpu().numpy() + clip["transl"][frame_indices, None, :]
     np.savez_compressed(output_dir / "reference_lbs.local.npz", vertices=expected.astype(np.float32),
+                        frame_indices=frame_indices, fps=int(clip["fps"]))
+    np.savez_compressed(output_dir / "pose_offsets.local.npz", offsets=offsets.astype(np.float32), fps=int(clip["fps"]))
+    expected_full = full_vertices.detach().cpu().numpy() + clip["transl"][frame_indices, None, :]
+    np.savez_compressed(output_dir / "reference_full.local.npz", vertices=expected_full.astype(np.float32),
                         frame_indices=frame_indices, fps=int(clip["fps"]))
     print(f"Prepared official SMPL-X mesh: {len(template)} vertices, {len(faces)} faces, 55 bones")
 

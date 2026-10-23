@@ -22,6 +22,35 @@
 
 它们包含 `poses[T,165]`（SMPL-X 55 关节轴角）、`trans[T,3]`、`betas[10]`、`gender` 和 `mocap_framerate`。身体姿态和根位移来自本仓库的程序测试动作；手部、下颌和眼睛目前保持零姿态。它们不是逐帧网格缓存，也没有内置人体模型。
 
+## 本机真实 SMPL-X 人体场景（模型派生文件，未入库）
+
+使用官网 `SMPLX_MALE.npz`，`prepare_official_smplx.py` 提取 10,475 顶点、55 关节、官方权重和每帧姿态修正；`build_blender_scene.py` 建立 Blender 骨架蒙皮；`bake_pose_correctives.py` 把每帧修正烘焙成蒙皮前的形态键。本机生成：
+
+- `demos/local-smplx/walk_squat/walk_squat.SMPLX_MALE.full.blend`（180 帧）
+- `demos/local-smplx/startle_jump/startle_jump.SMPLX_MALE.full.blend`（120 帧）
+- `demos/local-smplx/walk_startle/walk_startle.SMPLX_MALE.full.blend`（150 帧）
+
+每段都有同名 `.full.png` 渲染图。抽查首、中、末帧，Blender 网格与上游完整 SMPL-X LBS + pose blendshapes 的最大顶点误差约 0.000001 米。形态键是按 30 fps 逐帧烘焙的；修改骨架动作后需要重新计算修正。官网模型以及所有派生 `.blend` 被 `.gitignore` 排除，开源仓库只保留生成代码和自制白模。
+
+复现时先从官网取得适用许可的模型，再执行：
+
+```sh
+SMPLX_SOURCE="$HOME/.x-repo/github.com/vchoutas/smplx"
+PYTHONPATH="$SMPLX_SOURCE:." python3 prepare_official_smplx.py \
+  /path/to/SMPLX_MALE.npz walk_squat.smplx.npz demos/local-smplx/walk_squat
+blender -b --factory-startup --python build_blender_scene.py -- \
+  demos/local-smplx/walk_squat/model_fixture.local.npz walk_squat.smplx.npz \
+  demos/local-smplx/walk_squat/walk_squat.SMPLX_MALE.lbs.blend \
+  demos/local-smplx/walk_squat/reference_lbs.local.npz
+blender -b demos/local-smplx/walk_squat/walk_squat.SMPLX_MALE.lbs.blend \
+  --python bake_pose_correctives.py -- \
+  demos/local-smplx/walk_squat/pose_offsets.local.npz \
+  demos/local-smplx/walk_squat/reference_full.local.npz \
+  demos/local-smplx/walk_squat/walk_squat.SMPLX_MALE.full.blend
+```
+
+这条路线直接使用官网模型数据，**没有安装官方 Blender 插件**。上面的 `.npz` 是为插件保留的独立导入接口。
+
 ## 在 Blender 中导入
 
 1. 使用 Blender 4.5 的正式版本或更新版本。从 [SMPL-X 官方站点](https://smpl-x.is.tue.mpg.de/)取得 **SMPL-X for Blender** 插件 ZIP；该 ZIP 带有插件所需的 Locked Head 身型。仅下载[代码仓库](https://gitlab.tuebingen.mpg.de/jtesch/smplx_blender_addon)不能创建 SMPL-X 人体。
@@ -42,4 +71,4 @@ blender -b --python blender_import.py -- \
 
 ## 目前的验证边界
 
-导出器已按官方插件当前 `operators/animation.py` 的字段检查与 55 关节规格验证，且三段文件都可由 NumPy 无 pickle 读取。Blender 4.5.0 Beta 在受限沙箱中启动失败，在正常权限下已成功生成并重新打开白模 `.blend`。官方 Blender 插件模型 ZIP 尚未安装，因此真实 SMPL-X 人体蒙皮与姿态修正仍待验收。仓库不分发受限的模型文件。
+导出器已按官方插件当前 `operators/animation.py` 的字段检查与 55 关节规格验证，且三段文件都可由 NumPy 无 pickle 读取。Blender 4.5.0 Beta 在正常权限下已成功生成白模和真实 SMPL-X 人体 `.blend`；完整姿态修正也已与上游输出抽样对照。官方 Blender 插件 ZIP 下载仍未完成，因此未验收插件自身的导入流程。仓库不分发受限的模型或其派生人体文件。

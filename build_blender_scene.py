@@ -1,7 +1,7 @@
-"""Build an editable Blender scene using the self-authored 55-bone test body.
+"""Build an editable Blender scene from a synthetic or licensed SMPL-X fixture.
 
-This body uses SMPL-X joint names/order and synthetic vertex weights. It is
-not the licensed SMPL-X body mesh, blendshapes, or official Blender add-on.
+The synthetic fixture has self-authored vertices and weights. The official
+fixture uses licensed SMPL-X geometry and weights and stays local only.
 
 blender -b --factory-startup --python build_blender_scene.py -- \
   fixture.npz walk_squat.smplx.npz walk_squat.synthetic_rig.blend \
@@ -136,7 +136,7 @@ def make_scene(fixture, clip, output, reference, render_path=None):
     target = Vector((-0.8, 0, 0.95))
     camera.rotation_euler = (target - camera.location).to_track_quat("-Z", "Y").to_euler()
     camera_data.type = "ORTHO"
-    camera_data.ortho_scale = 5.1
+    camera_data.ortho_scale = 3.6 if is_official else 5.1
     scene.camera = camera
     light_data = bpy.data.lights.new("Softbox", "AREA")
     light = bpy.data.objects.new("Softbox", light_data)

@@ -8,11 +8,11 @@
 
 ## Blender 官方 SMPL-X 蒙皮接口
 
-[三段可播放的 Blender 场景、官方插件动作文件及步骤](demos/blender/README.md)已生成。现有 `.blend` 使用自制白模、SMPL-X 的 55 关节顺序与线性蒙皮；已在 Blender 中抽样比对上游 LBS，顶点误差低于 1 毫米。它们不是官方 SMPL-X 人体。另有三段 `.npz` 已按官方 **SMPL-X for Blender** 插件格式封装；取得插件模型包后，可用其真实人体网格、骨架和姿态修正形态键导入。
+[Blender 场景与导入步骤](demos/blender/README.md)已生成。仓库内三段 `.blend` 是可编辑的自制白模。另使用官网男性 SMPL-X 模型，在本机忽略目录 `demos/local-smplx/` 生成三段真实人体 `.full.blend`：10,475 顶点、55 关节、官方蒙皮权重和逐帧姿态修正。Blender 首、中、末帧与上游完整 SMPL-X LBS 的最大顶点误差约 1 微米。模型派生文件不提交到开源仓库。
 
 ## 当前结果（2026-10-23）
 
-这三个文件是**程序动作写入 SMPL-X 参数格式**的测试，不是 MotionBricks 生成、G1→SMPL-X 重定向或 SMPL-X 网格渲染。`smplx_bridge.py` 已能用官方 `smplx.create` 接收这些参数，逐帧计算网格与头部位置，再导出头部四元数和可选头皮顶点；本机尚无 `SMPLX_MALE.npz/.pkl` 模型资产，因此实际网格推理没有跑通。头发引擎仓库/接口也尚未定位，所以 `hair_attachment.json` 是对接契约，尚未送入引擎。
+这三个动作仍是**程序生成的测试**，不是 MotionBricks 输出或 G1→SMPL-X 重定向。官网 Julia 男性模型已用于本地 Blender 人体蒙皮验证；这个 NPZ 省略了 `smplx.create` 所需的手部 PCA 字段，所以 `prepare_official_smplx.py` 直接读取官网顶点、权重、骨架和姿态修正，并调用上游 `smplx.lbs` 做对照。头发引擎仓库/接口尚未定位，`hair_attachment.json` 仍是待对接的契约。
 
 | 用例 | SMPL-X 参数 | 诊断视频 | 技术检查 |
 |---|---|---|---|
@@ -47,7 +47,7 @@ PYTHONPATH="$SMPLX_SOURCE" python3 smplx_bridge.py run \
 
 ## 下一道实际验收
 
-拿到男性 SMPL-X 模型文件后，对三段参数运行官方前向推理：确认顶点、关节和头部锚点逐帧数量一致；抽查蹲下帧与跳跃帧的脚底位置。拿到头发引擎后，从它的静态头套或发根绑定数据提取顶点索引，导入 `hair_attachment.json`，用“跳起后落地”检查发丝延迟、穿模与坐标方向。拿到可运行的 MotionBricks CUDA 环境后，用相同三段条件生成 G1 输出，再开始真正的 G1→SMPL-X 拟合质量比较。
+真实 SMPL-X 网格与蒙皮已在 Blender 验证。下一步检查深蹲时脚底接地和关节自然度；拿到头发引擎后，从发根绑定提取头皮索引，导入 `hair_attachment.json`，测试落地后的发丝延迟与穿模。拿到可运行的 MotionBricks CUDA 环境后，用同三段条件生成 G1 输出，再比较真实的 G1→SMPL-X 拟合质量。
 
 ## 应用到具体影片
 
@@ -55,6 +55,6 @@ PYTHONPATH="$SMPLX_SOURCE" python3 smplx_bridge.py run \
 
 ## 上游源码与许可边界
 
-官方 [vchoutas/smplx](https://github.com/vchoutas/smplx) 已单独拉取在共享仓库目录 `~/.x-repo/github.com/vchoutas/smplx`，检出版本 `1265df7`。源码仓库不包含 `SMPLX_MALE.npz/.pkl`；模型需从[官方站点](https://smpl-x.is.tue.mpg.de/)注册取得。`worldlines-motion` 不复制上游源码或模型。
+官方 [vchoutas/smplx](https://github.com/vchoutas/smplx) 已单独拉取在共享仓库目录 `~/.x-repo/github.com/vchoutas/smplx`，检出版本 `1265df7`。源码仓库不包含 `SMPLX_MALE.npz/.pkl`；本机从[官方站点](https://smpl-x.is.tue.mpg.de/)单独取得模型。`worldlines-motion` 不复制上游源码或模型。
 
 上游仓库的 [LICENSE](https://github.com/vchoutas/smplx/blob/main/LICENSE) 对该仓库的软件与模型写有非商业用途及再分发限制。我们的基础包不自动安装 `smplx`；取得适用许可后可选择性安装 `worldlines-motion[smplx]`，或在本地测试时把官方源码目录加入 `PYTHONPATH`。发布开源工具前须核定实际使用的软件与模型许可。
