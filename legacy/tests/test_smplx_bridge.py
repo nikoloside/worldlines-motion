@@ -30,7 +30,7 @@ class BridgeTests(unittest.TestCase):
     def test_saved_clip_round_trip(self):
         from pathlib import Path
         for case in CASES:
-            path = Path(__file__).with_name(f"{case}.smplx.npz")
+            path = Path(__file__).resolve().parents[2] / "demos" / "clips" / f"{case}.smplx.npz"
             if path.exists():
                 self.assertEqual(validate(load_clip(path)), round(CASES[case] * 30))
 

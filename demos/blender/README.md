@@ -10,7 +10,7 @@
 
 这三个场景有可编辑的 55 关节骨架、线性蒙皮权重、关键帧、灯光、地面和机位。Blender 后台重新打开成功；在首帧、中间帧和末帧与上游 SMPL-X LBS 比较，顶点误差均小于 1 毫米。**人体网格与权重是本项目自制测试素材，不是官方 SMPL-X 模型。**
 
-用 `build_blender_scene.py` 可重新生成；`synthetic_fixture.npz` 是该白模的顶点、骨架和权重。
+用 `legacy/build_blender_scene.py` 可重新生成；`synthetic_fixture.npz` 是该白模的顶点、骨架和权重。
 
 以下三段 `.npz` 可供官方 **SMPL-X for Blender** 插件的 **Add Animation** 导入：
 
@@ -24,7 +24,7 @@
 
 ## 本机真实 SMPL-X 人体场景（模型派生文件，未入库）
 
-使用官网 `SMPLX_MALE.npz`，`prepare_official_smplx.py` 提取 10,475 顶点、55 关节、官方权重和每帧姿态修正；`build_blender_scene.py` 建立 Blender 骨架蒙皮；`bake_pose_correctives.py` 把每帧修正烘焙成蒙皮前的形态键。本机生成：
+使用官网 `SMPLX_MALE.npz`，`wlmotion rig`（原 `prepare_official_smplx.py`）提取 10,475 顶点、55 关节、官方权重和每帧姿态修正；`legacy/build_blender_scene.py` 建立 Blender 骨架蒙皮；`legacy/bake_pose_correctives.py` 把每帧修正烘焙成蒙皮前的形态键。本机生成：
 
 - `demos/local-smplx/walk_squat/walk_squat.SMPLX_MALE.full.blend`（180 帧）
 - `demos/local-smplx/startle_jump/startle_jump.SMPLX_MALE.full.blend`（120 帧）
@@ -45,19 +45,18 @@
 ```sh
 DEMO=demos/local-smplx/muscular_walk_squat
 SMPLX_SOURCE="$HOME/.x-repo/github.com/vchoutas/smplx"
-python3 make_muscular_demo_clip.py walk_squat.smplx.npz "$DEMO/walk_squat.muscular_clip.npz"
-PYTHONPATH="$SMPLX_SOURCE:." python3 prepare_official_smplx.py \
-  /path/to/SMPLX_MALE.npz "$DEMO/walk_squat.muscular_clip.npz" "$DEMO" \
-  --physique muscular_male
-blender -b --factory-startup --python build_blender_scene.py -- \
+PYTHONPATH=legacy:. python3 legacy/make_muscular_demo_clip.py demos/clips/walk_squat.smplx.npz "$DEMO/walk_squat.muscular_clip.npz"
+PYTHONPATH="$SMPLX_SOURCE:." wlmotion --model /path/to/SMPLX_MALE.npz rig \
+  "$DEMO/walk_squat.muscular_clip.npz" "$DEMO" --physique muscular_male
+blender -b --factory-startup --python legacy/build_blender_scene.py -- \
   "$DEMO/model_fixture.local.npz" "$DEMO/walk_squat.muscular_clip.npz" \
   "$DEMO/walk_squat.MUSCULAR_MALE.lbs.blend" "$DEMO/reference_lbs.local.npz"
-blender -b "$DEMO/walk_squat.MUSCULAR_MALE.lbs.blend" --python bake_pose_correctives.py -- \
+blender -b "$DEMO/walk_squat.MUSCULAR_MALE.lbs.blend" --python legacy/bake_pose_correctives.py -- \
   "$DEMO/pose_offsets.local.npz" "$DEMO/reference_full.local.npz" \
   "$DEMO/walk_squat.MUSCULAR_MALE.full.blend"
-blender -b "$DEMO/walk_squat.MUSCULAR_MALE.full.blend" --python polish_muscular_scene.py -- \
+blender -b "$DEMO/walk_squat.MUSCULAR_MALE.full.blend" --python legacy/polish_muscular_scene.py -- \
   "$DEMO/walk_squat.MUSCULAR_MALE.review.blend" "$DEMO/walk_squat.MUSCULAR_MALE.portrait.png"
-blender -b "$DEMO/walk_squat.MUSCULAR_MALE.review.blend" --python render_blender_video.py -- \
+blender -b "$DEMO/walk_squat.MUSCULAR_MALE.review.blend" --python legacy/render_blender_video.py -- \
   "$DEMO/walk_squat.MUSCULAR_MALE.review.mp4"
 ```
 
@@ -65,14 +64,14 @@ blender -b "$DEMO/walk_squat.MUSCULAR_MALE.review.blend" --python render_blender
 
 ```sh
 SMPLX_SOURCE="$HOME/.x-repo/github.com/vchoutas/smplx"
-PYTHONPATH="$SMPLX_SOURCE:." python3 prepare_official_smplx.py \
-  /path/to/SMPLX_MALE.npz walk_squat.smplx.npz demos/local-smplx/walk_squat
-blender -b --factory-startup --python build_blender_scene.py -- \
-  demos/local-smplx/walk_squat/model_fixture.local.npz walk_squat.smplx.npz \
+PYTHONPATH="$SMPLX_SOURCE:." wlmotion --model /path/to/SMPLX_MALE.npz rig \
+  demos/clips/walk_squat.smplx.npz demos/local-smplx/walk_squat
+blender -b --factory-startup --python legacy/build_blender_scene.py -- \
+  demos/local-smplx/walk_squat/model_fixture.local.npz demos/clips/walk_squat.smplx.npz \
   demos/local-smplx/walk_squat/walk_squat.SMPLX_MALE.lbs.blend \
   demos/local-smplx/walk_squat/reference_lbs.local.npz
 blender -b demos/local-smplx/walk_squat/walk_squat.SMPLX_MALE.lbs.blend \
-  --python bake_pose_correctives.py -- \
+  --python legacy/bake_pose_correctives.py -- \
   demos/local-smplx/walk_squat/pose_offsets.local.npz \
   demos/local-smplx/walk_squat/reference_full.local.npz \
   demos/local-smplx/walk_squat/walk_squat.SMPLX_MALE.full.blend
@@ -91,7 +90,7 @@ blender -b demos/local-smplx/walk_squat/walk_squat.SMPLX_MALE.lbs.blend \
 也可在插件安装并启用后批量生成 `.blend`：
 
 ```sh
-blender -b --python blender_import.py -- \
+blender -b --python worldlines_motion/export/blender_import.py -- \
   demos/blender/walk_squat.blender_smplx.npz \
   demos/blender/walk_squat.blend --correctives
 ```

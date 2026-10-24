@@ -34,7 +34,7 @@ class ExportContractTests(unittest.TestCase):
                 joints[:, 15, :] = transl + torch.tensor([[0.0, 1.5, 0.0]])
                 return type("Output", (), {"vertices": vertices, "joints": joints})()
 
-        clip = load_clip(Path(__file__).with_name("startle_jump.smplx.npz"))
+        clip = load_clip(Path(__file__).resolve().parents[2] / "demos" / "clips" / "startle_jump.smplx.npz")
         with tempfile.TemporaryDirectory(prefix="worldlines-smplx-test-") as folder:
             root = Path(folder)
             model_file = root / "SMPLX_MALE.npz"

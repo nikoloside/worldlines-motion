@@ -2,6 +2,15 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .venv/
-models/
-demos/local-smplx/
+.env
+.DS_Store
 *.blend1
+
+# model files and model-derived geometry never enter the repo
+models/
+takes/
+demos/local-smplx/
+worldlines_motion/source/gvhmr_worker/.venv/
+worldlines_motion/source/gvhmr_worker/weights/
+worldlines_motion/source/gvhmr_worker/body_models/
+worldlines_motion/source/gvhmr_worker/cache/

@@ -14,7 +14,7 @@ class SyntheticLBSTests(unittest.TestCase):
     def test_walk_squat_reaches_stage_and_lowers_head_with_feet_near_floor(self):
         from render_lbs_demo import run_lbs
 
-        clip = load_clip(Path(__file__).with_name("walk_squat.smplx.npz"))
+        clip = load_clip(Path(__file__).resolve().parents[2] / "demos" / "clips" / "walk_squat.smplx.npz")
         frames = np.array([0, 72, 105, 179])  # start, stopped, squat, finish
         vertices, joints, faces, _ = run_lbs(clip, frames)
         self.assertEqual(vertices.shape[0], 4)
@@ -27,7 +27,7 @@ class SyntheticLBSTests(unittest.TestCase):
     def test_startle_jump_leaves_ground_and_lands(self):
         from render_lbs_demo import run_lbs
 
-        clip = load_clip(Path(__file__).with_name("startle_jump.smplx.npz"))
+        clip = load_clip(Path(__file__).resolve().parents[2] / "demos" / "clips" / "startle_jump.smplx.npz")
         frames = np.array([0, 57, 119])
         _, joints, _, _ = run_lbs(clip, frames)
         self.assertGreater(float(joints[1, 15, 1] - joints[0, 15, 1]), 0.25)

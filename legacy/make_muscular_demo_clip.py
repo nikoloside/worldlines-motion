@@ -9,7 +9,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from muscular_profile import MUSCULAR_MALE_BETAS
+from worldlines_motion.physique import MUSCULAR_MALE_BETAS
 from smplx_bridge import load_clip, save_clip
 
 

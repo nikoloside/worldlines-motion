@@ -1,0 +1,4 @@
+worker.py, hands.py, setup_hands.py, requirements.txt and setup.ps1 are copied from
+prompt2rig (https://github.com/blendi-remade/prompt2rig), Copyright 2026 blendi-remade,
+Apache License 2.0. Portions of worker.py (leg_length) derive from Motion2MixamoRig
+(https://github.com/MaxLiu22/Motion2MixamoRig), Apache License 2.0.

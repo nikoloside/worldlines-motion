@@ -1,60 +1,108 @@
-# Worldlines Motion Lab
+# Worldlines Motion
 
-独立的角色动作实验项目。当前有标准动作和 SMPL-X 姿态接口；下一阶段是 MotionBricks 重定向与头发引擎集成。此项目不依赖某一部短剧的剧本或镜头目录。
+> **EN** · An open-source toolkit that turns a text prompt or a video into SMPL-X motion, cleans it up, sculpts the body (muscular, male bulge) and exports to Blender. Runs on a Mac with no GPU (MediaPipe path); plugs into a GVHMR worker for high quality. The browser workbench walks the same four stages as the CLI. Apache-2.0; model files are never redistributed.
 
-## 可观看的三维白模测试
+把一句动作描述或一段视频变成 SMPL-X 动作的工具包。整个生产流程只有四步，命令行、Python 包和浏览器工作台都按这四步组织：
 
-[三段双机位视频、关键帧和逐帧数据](demos/synthetic-lbs/README.md)已生成。蓝衣角色是本项目自制测试身型，逐帧调用 SMPL-X 上游的 LBS 蒙皮函数；红点是头部/头皮锚点。它验证了三维动作与附件数据链路，不代表已取得或运行官方 SMPL-X Body。
-
-## Blender 官方 SMPL-X 蒙皮接口
-
-[Blender 场景与导入步骤](demos/blender/README.md)已生成。仓库内三段 `.blend` 是可编辑的自制白模。另使用官网男性 SMPL-X 模型，在本机忽略目录 `demos/local-smplx/` 生成三段真实人体 `.full.blend` 和视频：10,475 顶点、55 关节、官方蒙皮权重和逐帧姿态修正。另有一个胸肩臂加厚、腰部收紧的肌肉男自定义塑形 Blender 动画与视频。Blender 首、中、末帧与上游完整 SMPL-X LBS 的最大顶点误差约 1 微米。模型派生文件不提交到开源仓库；肌肉塑形本身不是官方 beta 参数。
-
-## 当前结果（2026-10-23）
-
-这三个动作仍是**程序生成的测试**，不是 MotionBricks 输出或 G1→SMPL-X 重定向。官网 Julia 男性模型已用于本地 Blender 人体蒙皮验证；这个 NPZ 省略了 `smplx.create` 所需的手部 PCA 字段，所以 `prepare_official_smplx.py` 直接读取官网顶点、权重、骨架和姿态修正，并调用上游 `smplx.lbs` 做对照。头发引擎仓库/接口尚未定位，`hair_attachment.json` 仍是待对接的契约。
-
-| 用例 | SMPL-X 参数 | 诊断视频 | 技术检查 |
-|---|---|---|---|
-| 男生入画、停下、深蹲、起身 | [walk_squat.smplx.npz](walk_squat.smplx.npz) | [walk_squat.preview.mp4](walk_squat.preview.mp4) | 根位移、髋膝踝曲线、蹲下时头部与头发根部高度 |
-| 原地受惊、预备、跳起、落地 | [startle_jump.smplx.npz](startle_jump.smplx.npz) | [startle_jump.preview.mp4](startle_jump.preview.mp4) | 起跳和落地时刻、头部加速度、头发惯性输入 |
-| 入画、停下、受惊跳起 | [walk_startle.smplx.npz](walk_startle.smplx.npz) | [walk_startle.preview.mp4](walk_startle.preview.mp4) | 行走到突发动作的过渡、停步脚接触 |
-
-预览是参数诊断用的二维火柴人；它不显示 SMPL-X 实际身型、皮肤形变或头发物理。当前动作只证明格式与时序，尚不能以“无脚滑、关节自然”作为结论。
-
-## 本机运行
-
-```sh
-python3 -m pip install -e .
-SMPLX_SOURCE="$HOME/.x-repo/github.com/vchoutas/smplx"
-PYTHONPATH="$SMPLX_SOURCE" python3 -m unittest discover -s . -p 'test_*.py' -v
-# 取得适用许可和模型文件后，运行真实人体网格推理：
-PYTHONPATH="$SMPLX_SOURCE" python3 smplx_bridge.py run \
-  walk_squat.smplx.npz \
-  /path/to/SMPLX_MALE.npz \
-  /tmp/worldlines-walk-squat --gender male
+```
+ ① 来源 source        ② 动作 motion         ③ 身体 body           ④ 导出 export
+ prompt → fal 视频     naturalize            physique              Blender 插件 .npz
+ 视频 → GVHMR/MediaPipe  平滑·关节限位·贴地·脚锁   肌肉·凸起·胸·腰·betas    全蒙皮 rig · 网格缓存 · 审片渲染
+ 片段库 / 程序化片段
+            └──────────── worldlines.smplx_motion.v1 片段在四步之间流转 ────────────┘
 ```
 
-成功后输出 `smplx_animation.npz`（`vertices[T,V,3]`、`faces[F,3]`、帧率）和 `hair_attachment.json`（每帧世界坐标头关节位置、`xyzw` 头部四元数）。如果头发引擎已有固定头皮顶点索引，给 `--scalp-indices /path/to/indices.npy`，会追加逐帧头皮顶点。模型文件必须由使用者按对应许可获取；仓库不包含模型文件。
+核心思路来自 [prompt2rig](https://github.com/blendi-remade/prompt2rig)（文生视频 + GVHMR 提动作 + 浏览器实时回放，Apache-2.0）。这里把目标骨架从 Mixamo 换成官方 SMPL-X，把动作数据固定为本项目的片段格式，并补上动作清理、身型雕刻和一条 Mac 就能闭环的视频解算。
 
-## 整条工作链
+## 生产流程
 
-1. **导演指令 → 时间事件**：把“从门口入画，停下，蹲下”拆成入画、停步、下蹲、保持、起身。保存每段起止时间和空间目标。剧情里的惊吓需另给触发事件（声音、道具、演员反应方向）。
-2. **动作源 → 中立 `MotionClip`**：先用以上程序用例做基线；文字项目用导演事件驱动 MotionBricks，视频项目先恢复人物根轨迹、人体姿态和脚接触。两路都存为有帧率、骨架、坐标、来源的 `MotionClip`，保留原始帧。MotionBricks 当前公开预览主骨架是 34 关节 G1，需先解码为根位移、关节位置/旋转、脚接触，不能直接把 29 个机器人铰链角填入 SMPL-X 的 63 维身体轴角。[MotionBricks 动作格式](https://github.com/NVlabs/GR00T-WholeBodyControl/blob/main/motionbricks/docs/motion_representation.md)
-3. **G1 → 人体 → SMPL-X 拟合**：统一坐标系和尺度，匹配两侧髋、膝、踝、肩、肘、腕、腰、头；用逆运动学求 21 个 SMPL-X 局部轴角；再优化脚接地、步长、关节范围及动作连续性。无法对应的 G1 铰链、手部/脸部细节不能凭空恢复，需另一路表演或规则层补足。
-4. **SMPL-X → 角色和头发**：将人物固定 `betas` 与动作逐帧送入官方模型；头发以头部四元数和头皮网格位置作为边界条件，另外输入速度、重力、风、碰撞体。头发在身体姿态计算后更新，并与身体、镜头用相同时间戳。当前只产出头发附件数据；具体引擎的坐标、单位、骨骼与头皮索引仍待映射。
-5. **镜头合成与验收**：Blockout 管演员根轨迹、机位、焦段和场景；我们的动画层在同一时间轴上驱动 SMPL-X。逐项看脚滑、蹲起重心、跳起落地、头发滞后和穿模。Blockout 目前没有现成的逐帧 SMPL-X 轨道，因此先做外部合成，再考虑扩展其求值器。
+**① 来源。** 三个入口，产出都是一条片段。
 
-## 下一道实际验收
+- **文字**：`source/prompt.py` 复用 prompt2rig 的做法，先用 FLUX 生成一张正面站立的"演员"图，再用 H3 Max Turbo 或 FLUX 3 Max 让这个演员做动作，提示词里固定机位、全身入画、不转身。需要 `.env` 里的 `FAL_KEY`。
+- **视频**：`source/video.py` 自动选后端。GVHMR worker（`source/gvhmr_worker/`，prompt2rig 的 `hq/` 原样移植，CUDA，本机或远程）质量高；没有 CUDA 时落到 MediaPipe 解算（`source/mediapipe_solver.py` 取世界关键点，`source/landmarks_to_smplx.py` 逐骨对准到 SMPL-X 骨架求局部轴角，根位移由二维髋点折算，没有深度）。MediaPipe 的输出在提取时就贴地，但抖动、脚滑和关节越界留给第二步。
+- **片段库**：`takes/` 里保存过的片段，或 `demos/clips/` 的程序化测试片段（`source/procedural.py`，不需要模型文件）。
 
-真实 SMPL-X 网格与蒙皮已在 Blender 验证。下一步检查深蹲时脚底接地和关节自然度；拿到头发引擎后，从发根绑定提取头皮索引，导入 `hair_attachment.json`，测试落地后的发丝延迟与穿模。拿到可运行的 MotionBricks CUDA 环境后，用同三段条件生成 G1 输出，再比较真实的 G1→SMPL-X 拟合质量。
+**② 动作。** `naturalize.py` 是一串可单独开关的纯函数：四元数空间的速度自适应平滑（快动作少平滑，保留冲击）、关节范围软钳制（膝肘铰链方向、髋肩范围）、地面估计与防穿地、触地检测加分段式根位移修正消脚滑、首尾收束、可选呼吸。`metrics()` 给出抖动、脚滑、穿地等数字，工作台里 raw / natural 并排显示并可来回切换。
 
-## 应用到具体影片
+**③ 身体。** `physique.py` 在官方拓扑与蒙皮权重之上做区域雕刻：`muscular`（胸背加宽、收腰、三角肌与上臂）、`bulge`（男性裆部凸起，位置由两髋关节定位，沿法线与前方推出，`bulge_size` 控制范围）、`chest`、`waist`，再叠加十个 `betas`。配置以 `physique` 字段随片段保存，导出时按它重建；这些雕刻不属于官方 beta 空间。预设：`neutral`、`muscular_male`、`male_bulge`、`muscular_male_bulge`。
 
-标准动作是技术基线。影片项目可以引用这些动作并增加角色身型、走位、道具接触和摄影机参数；具体剧本的改编意见留在影片项目内，不进入本项目的核心动作数据。
+**④ 导出。** `export/blender_addon.py` 写官方 SMPL-X Blender 插件可导入的 `.npz`（Format 选 AMASS）；`export/blender_rig.py` 生成全蒙皮的本机 rig 数据（官方网格、权重、逐帧姿态修正，顶点误差约 1 微米，需要 torch 与 smplx）；`export/mesh.py` 烘焙逐帧顶点与头发附件数据；`render_soft.py` 做无依赖的审片渲染。
 
-## 上游源码与许可边界
+贯穿四步的是 `clip.py` 定义的片段格式 `worldlines.smplx_motion.v1`（`transl[T,3]`、`global_orient[T,3]`、`body_pose[T,63]`、`betas[10]`、`fps`，可选手部、下颌、触地、`physique`、`naturalize` 等字段）和 `smplx_model.py` 的 numpy 版 SMPL-X 蒙皮（含姿态修正，与上游 `smplx.lbs` 顶点差约 2e-7 米，不需要 torch）。
 
-官方 [vchoutas/smplx](https://github.com/vchoutas/smplx) 已单独拉取在共享仓库目录 `~/.x-repo/github.com/vchoutas/smplx`，检出版本 `1265df7`。源码仓库不包含 `SMPLX_MALE.npz/.pkl`；本机从[官方站点](https://smpl-x.is.tue.mpg.de/)单独取得模型。`worldlines-motion` 不复制上游源码或模型。
+## 安装与模型
 
-上游仓库的 [LICENSE](https://github.com/vchoutas/smplx/blob/main/LICENSE) 对该仓库的软件与模型写有非商业用途及再分发限制。我们的基础包不自动安装 `smplx`；取得适用许可后可选择性安装 `worldlines-motion[smplx]`，或在本地测试时把官方源码目录加入 `PYTHONPATH`。发布开源工具前须核定实际使用的软件与模型许可。
+```sh
+python3 -m pip install -e ".[video]"      # 或 uv venv && uv pip install -e ".[video]"
+cp .env.example .env                      # 需要文字入口时填 FAL_KEY；远程 worker 填 GVHMR_WORKER_URL
+```
+
+模型文件按 `SMPLX_MODEL` 环境变量、`models/SMPLX_MALE.npz`、`~/Downloads/SMPLX_MALE.npz` 的顺序查找，请从 [SMPL-X 官网](https://smpl-x.is.tue.mpg.de/)自行注册下载。MediaPipe 的 `.task` 文件首次使用时自动下到 `models/`。GVHMR worker 的安装见 `worldlines_motion/source/gvhmr_worker/README.md`。
+
+## 工作台
+
+```sh
+wlmotion workbench        # http://127.0.0.1:5190
+```
+
+左栏顶部是四个步骤页签，一次只看一步；下面一条状态栏随时显示当前片段走到了哪里（来源、是否自然化、身型、保存位置），完成的步骤会亮绿点。主区域是 three.js 舞台，SMPL-X 网格在浏览器里做 CPU 蒙皮，服务器只发送本机许可模型算出的静止网格、面、关节和稀疏权重，不复制模型文件。底部是播放条；空格播放暂停，左右键逐帧，数字键 1–4 切步骤。
+
+从视频或文字提取完成后自动跳到第 ② 步；拖身型滑块即时重算静止网格；第 ④ 步保存的是当前显示的版本和当前身型。服务端 `workbench/server.py` 是纯标准库，`/api/model`、`/api/clip`、`/api/naturalize`、`/api/video_to_motion`、`/api/prompt_to_motion`、`/api/save`、`/api/export/blender` 也可以被脚本直接调用。舞台和任务轮询来自 prompt2rig 的 `stage.js` 与 `app.js`。
+
+## 命令行
+
+`wlmotion` 的子命令按同样四步分组，`wlmotion --help` 可见：
+
+```sh
+# ① 来源
+wlmotion prompt "does jumping jacks" -o takes/ --preset muscular_male_bulge
+wlmotion video clip.mp4 -o takes/clip.smplx.npz          # 自动选 gvhmr / mediapipe，顺带自然化
+wlmotion procedural walk_squat takes/walk_squat.smplx.npz
+# ② 动作
+wlmotion naturalize in.npz out.npz --breathing 0.5
+# ③ 身体
+wlmotion physique in.npz out.npz --preset muscular_male --bulge 1.2 --bulge-size 1.3
+# ④ 导出
+wlmotion blender out.npz out.blender_smplx.npz
+wlmotion rig out.npz demos/local-smplx/out --profile '{"muscular":1,"bulge":1}'
+wlmotion mesh out.npz out_dir --step 2                    # smplx_animation.npz + hair_attachment.json
+wlmotion render out.npz frame.png --frame 60
+```
+
+## 仓库结构
+
+```
+worldlines_motion/
+  clip.py  smplx_model.py  render_soft.py     基础：片段格式、numpy 蒙皮、软渲染
+  source/        ① 来源   prompt.py video.py gvhmr_client.py gvhmr_worker/ mediapipe_solver.py landmarks_to_smplx.py fal_video.py procedural.py
+  naturalize.py  ② 动作
+  physique.py    ③ 身体
+  export/        ④ 导出   blender_addon.py blender_rig.py blender_import.py mesh.py
+  workbench/     浏览器工作台（server.py + public/）
+  cli.py         wlmotion
+tests/           新代码的测试
+demos/clips/     程序化测试片段与预览视频；demos/synthetic-lbs/、demos/blender/ 是不依赖官方模型的格式与时序基线
+legacy/          0.1 时代的脚本，原样冻结，只为复现 demos/（见 legacy/README.md）
+takes/           工作台和命令行的产出，不入库
+```
+
+## 已验证的结果（2026-10-25）
+
+用本机 Blender 渲染的 SMPL-X 深蹲视频做闭环：MediaPipe `full` 模型 90 帧约 16 秒解算，蹲起时序被正确恢复；自然化后抖动指标 0.89 → 0.49，触地脚滑 0.073 → 0.039 m/s，穿地 1.9 m → 0.014 m。肩关节的轴角误差偏大是扭转不可观测所致，渲染看不出问题。
+
+| 后端 | 运行环境 | 根位移 | 手指 | 质量 |
+|---|---|---|---|---|
+| GVHMR worker | CUDA，本机或远程 | 重力对齐的世界轨迹 | WiLoR 可选 | 高 |
+| MediaPipe 解算 | Mac / CPU | 二维髋点折算，无深度 | 无 | 预览级 |
+
+```sh
+PYTHONPATH=. python3 -m unittest discover -s tests -t .                 # 片段格式、身型、自然化、解算、导出、工作台接口
+```
+
+尚未在本机验证的两条路：fal 文生视频（没有 key）和 GVHMR worker（没有 CUDA）；两者的协议都按 prompt2rig 原样实现并有单元测试覆盖转换部分。
+
+## 许可边界
+
+代码按 Apache-2.0 开源（见 `LICENSE`、`NOTICE`）。本项目是非营利的开源项目，链路上的第三方件都在它们的使用范围内：GVHMR 允许教育、研究与非营利使用，SMPL-X、WiLoR、MANO 为非商业许可，Ultralytics YOLO 为 AGPL-3.0，fal 上的视频模型按各自条款。
+
+唯一的硬规则是**不随仓库再分发模型文件和派生几何**：`SMPLX_*.npz`、MANO、GVHMR/WiLoR 权重须由每位使用者自行注册获取，`.gitignore` 排除了 `models/`、`takes/`、`demos/local-smplx/` 与 worker 的权重目录；工作台只在本机内存里把许可模型算成静止网格发给浏览器，不写盘也不入库。

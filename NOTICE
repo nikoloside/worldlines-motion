@@ -1,0 +1,13 @@
+Worldlines Motion
+Copyright 2026 Worldlines contributors
+
+This product includes software developed by blendi-remade for prompt2rig
+(https://github.com/blendi-remade/prompt2rig), licensed under the Apache
+License 2.0:
+  - worldlines_motion/source/gvhmr_worker/   (GVHMR HQ worker, verbatim)
+  - worldlines_motion/source/fal_video.py    (fal.ai prompt and model choices)
+  - worldlines_motion/source/landmarks_to_smplx.py (per-bone aiming, ported from retarget.js)
+  - worldlines_motion/workbench/public/stage.js and the workbench layout
+
+Model files (SMPL-X, MANO, GVHMR, WiLoR, YOLO, MediaPipe) are not part of
+this distribution; each is obtained by the user under its own license.

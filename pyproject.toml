@@ -4,13 +4,27 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "worldlines-motion"
-version = "0.1.0"
-description = "Character motion experiments and SMPL-X interface for Worldlines"
+version = "0.3.0"
+description = "Prompt / video -> SMPL-X motion toolkit: source, naturalize, physique, export, plus a local workbench"
+readme = "README.md"
+license = { text = "Apache-2.0" }
 requires-python = ">=3.10"
 dependencies = ["numpy>=1.24", "Pillow>=10"]
 
 [project.optional-dependencies]
-smplx = ["torch>=2.0", "smplx>=0.1.28"]
+video = ["mediapipe>=0.10", "opencv-python>=4.8"]
+rig = ["torch>=2.0", "smplx>=0.1.28"]
+dev = ["pytest>=8"]
+
+[project.urls]
+Repository = "https://github.com/nikoloside/worldlines-motion"
+
+[project.scripts]
+wlmotion = "worldlines_motion.cli:main"
 
 [tool.setuptools]
-py-modules = ["smplx_bridge", "preview_clips", "render_lbs_demo", "blender_smplx"]
+packages = ["worldlines_motion", "worldlines_motion.source", "worldlines_motion.export", "worldlines_motion.workbench"]
+
+[tool.setuptools.package-data]
+"worldlines_motion.workbench" = ["public/*"]
+"worldlines_motion.source" = ["gvhmr_worker/*"]

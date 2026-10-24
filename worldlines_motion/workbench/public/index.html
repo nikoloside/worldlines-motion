@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>worldlines motion · workbench</title>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/" } }
+</script>
+<style>
+  /* stage and control styling adapted from prompt2rig (Apache-2.0); system fonts */
+  :root { color-scheme: dark; --void:#0e0c10; --coal:#1c1920; --coal2:#25212a; --coal3:#302b36; --rule:#2b2630; --ash:#8e8796; --ash2:#5d5765;
+    --bone:#f2ece2; --bone2:#e4dccd; --accent:#5ab8ff; --accent-dim:#1a2b3d; --gold:#ffc94a; --green:#7fd8a0; --err:#ff6b6b;
+    --sans: ui-sans-serif, system-ui, "PingFang SC", sans-serif; --mono: ui-monospace, Menlo, Consolas, monospace; }
+  * { box-sizing: border-box; } html, body { margin:0; height:100%; background:var(--void); color:var(--bone); font:13px/1.45 var(--sans); }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  .app { display:grid; grid-template-columns: 380px minmax(0,1fr); grid-template-rows: minmax(0,1fr) 54px; height:100vh; }
+  aside { grid-row:1/3; min-height:0; background:var(--coal); border-right:1px solid var(--rule); display:flex; flex-direction:column; }
+  .head { padding:14px 16px 10px; display:flex; flex-direction:column; gap:8px; }
+  h1 { margin:0; font-size:18px; letter-spacing:.3px; } h1 small { color:var(--ash); font-weight:400; font-size:11px; margin-left:8px; }
+  .pills { display:flex; flex-wrap:wrap; gap:6px; }
+  .pill { font:10.5px/1 var(--mono); padding:4px 7px; background:var(--coal2); color:var(--ash); display:inline-flex; gap:5px; align-items:center; }
+  .pill::before { content:""; width:5px; height:5px; background:currentColor; }
+  .pill.ok { color:var(--gold); } .pill.bad { color:var(--err); } .pill.busy { color:var(--accent); }
+
+  /* pipeline steps */
+  .steps { display:grid; grid-template-columns: repeat(4, 1fr); border-top:1px solid var(--rule); border-bottom:1px solid var(--rule); }
+  .step { border:0; background:transparent; padding:9px 4px 8px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--ash); border-bottom:2px solid transparent; }
+  .step b { font:11px var(--mono); font-weight:400; } .step span { font-size:12px; }
+  .step:hover { background:var(--coal2); } .step.on { color:var(--bone); border-bottom-color:var(--accent); }
+  .step .dot { width:6px; height:6px; border-radius:50%; background:var(--ash2); } .step.done .dot { background:var(--green); }
+  .status { font:11px/1.6 var(--mono); color:var(--ash); padding:8px 16px; border-bottom:1px solid var(--rule); background:var(--void); display:grid; grid-template-columns:auto 1fr; gap:0 10px; }
+  .status b { color:var(--bone); font-weight:400; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .status .good { color:var(--green); }
+
+  .panel { flex:1; min-height:0; overflow-y:auto; padding:14px 16px; display:none; flex-direction:column; gap:14px; }
+  .panel.on { display:flex; }
+  .block { display:flex; flex-direction:column; gap:8px; }
+  .block > label.title { font:10.5px/1 var(--mono); letter-spacing:.6px; color:var(--ash); display:flex; align-items:center; gap:8px; }
+  .block > label.title::after { content:""; flex:1; height:1px; background:var(--rule); }
+  .block.off { opacity:.45; } .block.off .go, .block.off textarea, .block.off .chip { pointer-events:none; }
+  textarea { width:100%; min-height:60px; resize:vertical; background:var(--void); border:1px solid var(--rule); padding:8px; outline:none; }
+  textarea:focus { border-color:var(--accent); }
+  .go { width:100%; padding:9px; border:0; background:var(--bone); color:var(--void); font-weight:600; cursor:pointer; }
+  .go:hover { background:var(--accent); } .go:disabled { opacity:.5; cursor:default; }
+  .btn { padding:6px 10px; border:0; background:var(--coal2); cursor:pointer; font-size:12px; } .btn:hover { background:var(--coal3); } .btn:disabled { opacity:.45; cursor:default; }
+  .btn.on { background:var(--accent-dim); color:var(--accent); } .btn.primary { background:var(--bone); color:var(--void); font-weight:600; } .btn.primary:hover { background:var(--accent); }
+  .row { display:flex; align-items:center; justify-content:space-between; gap:8px; } .row b { font:12px var(--mono); color:var(--accent); font-weight:400; }
+  .row.wrap { flex-wrap:wrap; justify-content:flex-start; }
+  select { background:var(--coal2); border:0; padding:5px 8px; cursor:pointer; max-width:100%; } option { background:var(--coal2); }
+  input[type=range] { width:150px; accent-color:var(--accent); }
+  input[type=text] { background:var(--void); border:1px solid var(--rule); padding:5px 7px; font:11.5px var(--mono); outline:none; } input[type=text]:focus { border-color:var(--accent); }
+  .check { display:flex; gap:8px; align-items:flex-start; cursor:pointer; } .check small { display:block; color:var(--ash); font-size:11px; }
+  .check input { accent-color:var(--accent); margin-top:3px; }
+  .note { color:var(--ash); font-size:11.5px; }
+  .chips { display:flex; flex-wrap:wrap; gap:5px; } .chip { font-size:11px; padding:4px 8px; background:var(--coal2); cursor:pointer; } .chip:hover { background:var(--coal3); }
+  .metrics { font:11px var(--mono); display:grid; grid-template-columns: auto 1fr 1fr; gap:2px 10px; color:var(--ash); }
+  .metrics b { color:var(--bone); font-weight:400; } .metrics .h { color:var(--accent); }
+  .clips { display:flex; flex-direction:column; gap:4px; max-height:300px; overflow-y:auto; }
+  .clipcard { display:grid; grid-template-columns: 1fr auto; gap:2px 8px; font-size:11.5px; padding:6px 9px; background:var(--coal2); cursor:pointer; }
+  .clipcard small { color:var(--ash); font:10.5px var(--mono); grid-column:1/3; } .clipcard:hover { background:var(--coal3); } .clipcard.on { background:var(--accent-dim); color:var(--accent); }
+  .logbox { border-top:1px solid var(--rule); } .logbox summary { font:10.5px var(--mono); color:var(--ash); padding:7px 16px; cursor:pointer; letter-spacing:.6px; }
+  .log { font:11px/1.5 var(--mono); color:var(--ash); background:var(--void); padding:8px 16px; max-height:160px; overflow-y:auto; white-space:pre-wrap; }
+  .log .ok { color:var(--bone); } .log .err { color:var(--err); } .log .hq { color:var(--gold); }
+
+  main { position:relative; overflow:hidden; min-width:0; } #stage { position:absolute; inset:0; } #stage canvas { display:block; }
+  .vidwrap { position:absolute; top:14px; left:14px; width:min(30%, 360px); border:1px solid var(--rule); background:#000; box-shadow:0 12px 34px rgba(0,0,0,.5); display:none; }
+  .vidwrap video { display:block; width:100%; }
+  .hud { position:absolute; right:14px; top:14px; display:flex; flex-direction:column; gap:6px; align-items:flex-end; }
+  .hud .tag { font:11px var(--mono); background:rgba(14,12,16,.82); padding:5px 8px; color:var(--ash); pointer-events:none; }
+  .hud .views { display:flex; gap:4px; } .hud .views .btn { font:11px var(--mono); background:rgba(14,12,16,.82); }
+  .banner { position:absolute; left:50%; bottom:18px; transform:translateX(-50%); background:rgba(14,12,16,.88); padding:8px 14px; font:11.5px var(--mono); display:none; } .banner.on { display:block; }
+  .empty { position:absolute; inset:0; display:flex; align-items:flex-end; padding-bottom:40px; justify-content:center; color:var(--ash); font-size:13px; pointer-events:none; text-align:center; line-height:1.8; }
+  footer { min-width:0; background:var(--coal); border-top:1px solid var(--rule); display:flex; align-items:center; gap:10px; padding:0 14px; }
+  footer input[type=range] { flex:1; width:auto; } footer .t { font:11px var(--mono); color:var(--ash); min-width:170px; text-align:right; }
+  input[type=file] { display:none; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="head">
+      <h1>worldlines motion<small>prompt / video → SMPL-X</small></h1>
+      <div class="pills"><span class="pill" id="pill-model">model…</span><span class="pill" id="pill-v2m">video→motion…</span><span class="pill" id="pill-fal">fal…</span></div>
+    </div>
+    <nav class="steps">
+      <button class="step on" data-stage="source"><b>1</b><span>来源</span><i class="dot"></i></button>
+      <button class="step" data-stage="motion"><b>2</b><span>动作</span><i class="dot"></i></button>
+      <button class="step" data-stage="body"><b>3</b><span>身体</span><i class="dot"></i></button>
+      <button class="step" data-stage="export"><b>4</b><span>导出</span><i class="dot"></i></button>
+    </nav>
+    <div class="status" id="status"><span>片段</span><b id="st-clip">—</b><span>动作</span><b id="st-motion">—</b><span>身体</span><b id="st-body">—</b><span>保存</span><b id="st-saved">—</b></div>
+
+    <!-- 1 来源 -->
+    <div class="panel on" data-stage="source">
+      <div class="block" id="blk-prompt">
+        <label class="title">文字 → 视频 → 动作</label>
+        <textarea id="prompt" placeholder="描述一个动作… e.g. does an energetic hip hop dance">walks in, stops, does a deep squat and stands back up</textarea>
+        <button class="go" id="go">生成视频并提取动作</button>
+        <div class="chips" id="chips"></div>
+        <div class="row"><span>video model</span><select id="videoModel"><option value="h3">h3 max turbo · fastest</option><option value="flux3">flux 3 max · best</option></select></div>
+        <div class="row"><span>duration <b id="duration-v">5s</b></span><input type="range" id="duration" min="2" max="15" step="1" value="5" /></div>
+        <div class="row"><span>orientation</span><select id="orientation"><option value="portrait">portrait 9:16</option><option value="landscape">landscape 16:9</option></select></div>
+        <span class="note" id="note-prompt">用 fal.ai 先生成一段演员视频，再从视频里提动作。需要 .env 里的 FAL_KEY。</span>
+      </div>
+      <div class="block">
+        <label class="title">视频 → 动作</label>
+        <div class="row"><button class="btn primary" id="btn-vid">选择视频文件…</button>
+          <select id="backend"><option value="auto">auto (gvhmr → mediapipe)</option><option value="gvhmr">gvhmr worker</option><option value="mediapipe">mediapipe (本机)</option></select></div>
+        <input type="file" id="file-vid" accept="video/*" />
+        <span class="note">GVHMR 需要 CUDA worker（远程亦可，设 GVHMR_WORKER_URL）；MediaPipe 在本机 CPU 上跑，较慢、深度较粗。提取后会自动用第 2 步的当前设置做一次自然化。</span>
+      </div>
+      <div class="block">
+        <label class="title">片段库 <button class="btn" id="btn-refresh" style="padding:2px 7px;font-size:10.5px">刷新</button></label>
+        <div class="clips" id="clips"></div>
+        <span class="note">takes/ 里是工作台和命令行保存的片段，demos/clips/ 是程序化测试片段。</span>
+      </div>
+    </div>
+
+    <!-- 2 动作 -->
+    <div class="panel" data-stage="motion">
+      <div class="block">
+        <label class="title">naturalize · 动作自然化</label>
+        <div class="row"><span>smoothing <b id="smooth_sigma-v"></b></span><input type="range" id="smooth_sigma" min="0" max="4" step="0.1" value="1.4" /></div>
+        <div class="row"><span>root smoothing <b id="root_sigma-v"></b></span><input type="range" id="root_sigma" min="0" max="6" step="0.1" value="2" /></div>
+        <label class="check"><input type="checkbox" id="velocity_adaptive" checked /><span>velocity adaptive<small>快动作处少平滑，保留冲击感</small></span></label>
+        <label class="check"><input type="checkbox" id="joint_limits" checked /><span>joint limits<small>膝肘铰链、髋肩范围软钳制</small></span></label>
+        <label class="check"><input type="checkbox" id="ground" checked /><span>ground<small>最低脚点贴地，不穿地</small></span></label>
+        <label class="check"><input type="checkbox" id="foot_lock" checked /><span>foot lock<small>检测触地并消除脚滑</small></span></label>
+        <label class="check"><input type="checkbox" id="settle_ends" checked /><span>settle ends<small>首尾收束</small></span></label>
+        <div class="row"><span>breathing <b id="breathing-v"></b></span><input type="range" id="breathing" min="0" max="1" step="0.05" value="0" /></div>
+        <div class="row wrap"><button class="btn primary" id="btn-nat">应用自然化</button><button class="btn" id="btn-ab">显示: natural</button><button class="btn" id="btn-reset">回到 raw</button></div>
+      </div>
+      <div class="block">
+        <label class="title">指标 · raw / natural</label>
+        <div class="metrics" id="metrics"></div>
+        <span class="note">angular_jerk 越低越顺；foot_skate 是触地时脚的平均滑动速度；floor_penetration 是穿地深度。</span>
+      </div>
+    </div>
+
+    <!-- 3 身体 -->
+    <div class="panel" data-stage="body">
+      <div class="block">
+        <label class="title">physique · 身型</label>
+        <div class="row"><span>preset</span><select id="preset"></select></div>
+        <div class="row"><span>muscular <b id="muscular-v"></b></span><input type="range" id="muscular" min="0" max="1" step="0.05" value="0" /></div>
+        <div class="row"><span>chest <b id="chest-v"></b></span><input type="range" id="chest" min="0" max="1.5" step="0.05" value="0" /></div>
+        <div class="row"><span>waist <b id="waist-v"></b></span><input type="range" id="waist" min="0" max="1.5" step="0.05" value="0" /></div>
+        <div class="row"><span>bulge <b id="bulge-v"></b></span><input type="range" id="bulge" min="0" max="1.5" step="0.05" value="0" /></div>
+        <div class="row"><span>bulge size <b id="bulge_size-v"></b></span><input type="range" id="bulge_size" min="0.5" max="2" step="0.05" value="1" /></div>
+        <div class="row"><span>betas</span><input type="text" id="betas" style="flex:1" value="0,0,0,0,0,0,0,0,0,0" /></div>
+        <span class="note">局部雕刻在官方 SMPL-X 拓扑与权重上，不属于官方 beta 空间；拖动即时重算静止网格，配置随片段保存为 physique。</span>
+      </div>
+    </div>
+
+    <!-- 4 导出 -->
+    <div class="panel" data-stage="export">
+      <div class="block">
+        <label class="title">保存片段</label>
+        <div class="row"><span>名字</span><input type="text" id="save-name" style="flex:1" placeholder="take" /></div>
+        <div class="row wrap"><button class="btn primary" id="btn-save">保存到 takes/</button></div>
+        <span class="note">保存当前显示的版本（raw 或 natural）和当前身型，格式 worldlines.smplx_motion.v1。</span>
+      </div>
+      <div class="block">
+        <label class="title">导出</label>
+        <div class="row wrap"><button class="btn" id="btn-blender">Blender 插件 .npz</button><button class="btn" id="btn-json">下载 JSON</button></div>
+        <span class="note">Blender 文件由已保存的片段生成，导入时 Format 选 AMASS。逐帧网格、全蒙皮 rig 和审片渲染用命令行：<br><code>wlmotion mesh</code> · <code>wlmotion rig</code> · <code>wlmotion render</code></span>
+      </div>
+    </div>
+
+    <details class="logbox"><summary>log</summary><div class="log" id="log"></div></details>
+  </aside>
+
+  <main>
+    <div id="stage"></div>
+    <div class="empty" id="empty">还没有片段<br><small>在第 1 步选择视频、输入文字，或从片段库里挑一条</small></div>
+    <div class="vidwrap" id="vidwrap"><video id="video" muted playsinline loop></video></div>
+    <div class="hud">
+      <div class="views"><button class="btn" id="v-skel">骨架</button><button class="btn on" id="v-follow">跟随</button><button class="btn" id="v-cine">运镜</button></div>
+      <div class="tag" id="hud-src">—</div><div class="tag" id="hud-time"></div>
+    </div>
+    <div class="banner" id="banner"></div>
+  </main>
+
+  <footer>
+    <button class="btn" id="play">▶</button>
+    <input type="range" id="scrub" min="0" max="1" step="1" value="0" />
+    <span class="t" id="time">—</span>
+    <select id="speed"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option></select>
+  </footer>
+</div>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

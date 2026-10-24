@@ -23,8 +23,8 @@
 
 ```sh
 SMPLX_SOURCE="$HOME/.x-repo/github.com/vchoutas/smplx"
-PYTHONPATH="$SMPLX_SOURCE:$PWD" python3 render_lbs_demo.py walk_squat.smplx.npz demos/synthetic-lbs
-PYTHONPATH="$SMPLX_SOURCE:$PWD" python3 -m unittest discover -s . -p 'test_*.py' -v
+PYTHONPATH="$SMPLX_SOURCE:$PWD/legacy:$PWD" python3 legacy/render_lbs_demo.py demos/clips/walk_squat.smplx.npz demos/synthetic-lbs
+PYTHONPATH="$SMPLX_SOURCE:$PWD/legacy:$PWD" python3 -m unittest discover -s legacy/tests -p 'test_*.py' -v
 ```
 
 **边界**：这是自制白模的官方 LBS 函数测试，不是官方 SMPL-X Body 网格推理。真实身型的脚滑、关节自然度、头发物理与 G1→人体重定向仍需在各自运行时验证。`worldlines-motion` 不含上游源码或人体模型资产。

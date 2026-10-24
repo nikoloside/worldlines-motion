@@ -1,4 +1,4 @@
-"""Prepare local-only SMPL-X mesh/weights for Blender from a licensed model.
+"""Prepare local-only SMPL-X mesh/weights for Blender from a licensed model (``wlmotion rig``).
 
 Output contains restricted model-derived geometry. Keep it out of Git.
 The resulting Blender rig has official topology, joint locations and LBS
@@ -9,19 +9,23 @@ Blender shape-key bake; these are local-only model-derived data.
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 import numpy as np
 import torch
 from smplx.lbs import batch_rodrigues, lbs
 
-from smplx_bridge import load_clip
-from muscular_profile import make_muscular_rest
+from ..clip import load_clip
+from ..physique import PRESETS, make_muscular_rest, make_rest
+from ..smplx_model import SMPLX
 
 
 def prepare(model_path: Path, clip_path: Path, output_dir: Path,
-            physique: str = "neutral", strength: float = 1.0) -> None:
+            physique: str = "neutral", strength: float = 1.0, profile: dict | None = None) -> None:
     clip = load_clip(clip_path)
+    if profile is None and isinstance(clip.get("physique"), dict):
+        profile = clip["physique"]
     # The Julia NPZ has the official mesh/LBS tensors but omits hand PCA means;
     # smplx.create expects those means, so read the geometry directly instead.
     with np.load(model_path, allow_pickle=False) as model:
@@ -32,7 +36,14 @@ def prepare(model_path: Path, clip_path: Path, output_dir: Path,
         faces = np.asarray(model["f"], dtype=np.int32)
         shapedirs = np.asarray(model["shapedirs"][:, :, :10], dtype=np.float32)
         posedirs = np.asarray(model["posedirs"], dtype=np.float32)
-    if physique == "muscular_male":
+    if profile is not None:
+        template, profile = make_rest(SMPLX(model_path), profile)
+        betas = np.asarray(profile["betas"], np.float32)
+        physique = "profile:" + json.dumps(profile, separators=(",", ":"))
+    elif physique in PRESETS and physique != "neutral":
+        template, profile = make_rest(SMPLX(model_path), PRESETS[physique])
+        betas = np.asarray(profile["betas"], np.float32)
+    elif physique == "muscular_male":
         template, betas = make_muscular_rest(template, shapedirs, regressor, weights, strength)
     elif physique == "neutral":
         betas = np.zeros(10, dtype=np.float32)
@@ -102,10 +113,12 @@ def main() -> None:
     parser.add_argument("model", type=Path)
     parser.add_argument("clip", type=Path)
     parser.add_argument("output_dir", type=Path)
-    parser.add_argument("--physique", choices=("neutral", "muscular_male"), default="neutral")
+    parser.add_argument("--physique", choices=("neutral", *PRESETS), default="neutral")
     parser.add_argument("--strength", type=float, default=1.0)
+    parser.add_argument("--profile", help='physique profile JSON, e.g. \'{"muscular":1,"bulge":1}\' (overrides --physique)')
     args = parser.parse_args()
-    prepare(args.model, args.clip, args.output_dir, args.physique, args.strength)
+    prepare(args.model, args.clip, args.output_dir, args.physique, args.strength,
+            json.loads(args.profile) if args.profile else None)
 
 
 if __name__ == "__main__":
