@@ -2,6 +2,8 @@
 
 > **EN** · An open-source toolkit that turns a text prompt or a video into SMPL-X motion, cleans it up, sculpts the body (muscular, male bulge) and exports to Blender. Runs on a Mac with no GPU (MediaPipe path); plugs into a GVHMR worker for high quality. The browser workbench walks the same four stages as the CLI. Apache-2.0; model files are never redistributed.
 
+![worldlines motion workbench · 第 3 步身型雕刻，mediapipe 片段自然化后套用 muscular_male_bulge 预设](docs/workbench.jpg)
+
 把一句动作描述或一段视频变成 SMPL-X 动作的工具包。整个生产流程只有四步，命令行、Python 包和浏览器工作台都按这四步组织：
 
 ```
